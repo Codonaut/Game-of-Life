@@ -1,0 +1,17 @@
+#container {
+	width: 600px;
+	height: 600px;
+}
+
+#game_board { 
+	width: auto;
+	border-collapse: collapse;
+}
+
+.live {
+	background-color: red;
+}
+
+.cell {
+	border: 1px solid #eee;
+}
