@@ -39,6 +39,13 @@ function Grid(w, h) {
 		});
 	}
 	
+	grid.randomize_config = function() {
+		// Randomizes the configuration of the grid
+		grid.traverse(function(cell) {
+			cell.live = Math.random() > .5;
+		});
+	}
+
 	function Cell(x, y) {
 		var cell = this;
 		cell.x = x;
@@ -67,7 +74,7 @@ function Grid(w, h) {
 	Cell.prototype.update = function() {
 		var cell = this;
 		if (cell.live) {
-			if (cell.live_neighbors !== 2 || cell.live_neighbors !== 3) {
+			if (cell.live_neighbors !== 2 && cell.live_neighbors !== 3) {
 				cell.live = false;
 			}
 		} else if (cell.live_neighbors === 3) {
@@ -122,18 +129,37 @@ function View(grid) {
 		view.grid.step();
 		view.update();
 	}
-	setInterval((function(view) {
-		return function() {
-			view.animate();
+	
+
+	view.start = function() {
+		if (!view.animator) {
+			view.animator = setInterval((function(view) {
+				return function() {
+					view.animate();
+				}
+			})(view), 400);
 		}
-	})(view), 2000);
+	}
+
+	view.stop = function() {
+		if (view.animator) {
+			clearInterval(view.animator);
+			view.animator = null;
+		}
+	}
 
 	view.init();
 }
 
 function GameOfLife() {
-	this.grid = new Grid(20, 20);
-	this.view = new View(this.grid);
+	var gol = this;
+	gol.grid = new Grid(100, 100);
+	gol.view = new View(this.grid);
+
+	gol.randomize_config = function() {
+		gol.grid.randomize_config();
+		gol.view.update();
+	}
 }
 
 function addClass(el, className) {
@@ -148,4 +174,4 @@ function removeClass(el, className) {
     el.className = el.className.replace(classRegexp, '');
 }
 
-var gol = new GameOfLife();
+var game_of_life = new GameOfLife();
