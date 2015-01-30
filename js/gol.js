@@ -29,6 +29,24 @@ function Grid(w, h) {
 		}
 	}
 
+	grid.coord_to_color = function(x, y) {
+		/*
+			Try and map x position to red, and y position to blue.
+		*/
+		var x_mult = x / grid.width,
+			y_mult = y / grid.height,
+			green = '99',
+			red =  Math.floor(256 * x_mult).toString(16),
+			blue = Math.floor(256 * y_mult).toString(16);
+		while (red.length < 2) {
+			red = "0" + red;
+		}
+		while (blue.length < 2) {
+			blue = "0" + blue;
+		}
+		return '#' + red + green + blue;
+	}
+
 	grid.step = function() {
 		// Determine who will live and die next run
 		grid.traverse(function(cell) {
@@ -43,7 +61,7 @@ function Grid(w, h) {
 		// Randomizes the configuration of the grid
 		// Todo: have this use set_config
 		grid.traverse(function(cell) {
-			cell.live = Math.random() > .5;
+			cell.update_liveliness(Math.random() > .5);
 		});
 	}
 
@@ -59,11 +77,10 @@ function Grid(w, h) {
 		for (x=0; x<grid.width; x++) {
 			for (y=0; y<grid.height; y++) {
 				cell = grid.rows[x][y];
-				cell.live = false;
 				if (map[x-start_x] && map[x-start_x][y-start_y]) {
-					cell.live = true;
+					cell.update_liveliness(true);
 				} else {
-					cell.live = false;
+					cell.update_liveliness(false);
 				}
 			}
 		}
@@ -76,6 +93,7 @@ function Grid(w, h) {
 		cell.live = false;
 		cell.live_neighbors = 0;
 		cell.element = null;
+		cell.live_color = "#ffffff";
 	}
 
 	Cell.prototype.compute_live_neighbors = function() {
@@ -98,10 +116,20 @@ function Grid(w, h) {
 		var cell = this;
 		if (cell.live) {
 			if (cell.live_neighbors !== 2 && cell.live_neighbors !== 3) {
-				cell.live = false;
+				cell.update_liveliness(false);
 			}
 		} else if (cell.live_neighbors === 3) {
-			cell.live = true;
+			cell.update_liveliness(true);
+		}
+	}
+
+	Cell.prototype.update_liveliness = function(live) {
+		var cell = this;
+		cell.live = live;
+		if (live) {
+			cell.element.style.backgroundColor = cell.live_color;
+		} else {
+			cell.element.style.backgroundColor = "#ffffff";
 		}
 	}
 
@@ -126,6 +154,7 @@ function View(grid) {
 				td = document.createElement('td');
 				addClass(td, 'cell');
 				cell = view.grid.rows[x][y];
+				cell.live_color = view.grid.coord_to_color(x, y);
 				cell.element = td;
 				td.addEventListener('click', (function(cell) {
 					return function(e) {
@@ -143,9 +172,13 @@ function View(grid) {
 	view.update = function() {
 		grid.traverse(function(cell) {
 			if (cell.live) {
-				addClass(cell.element, 'live');
+				// addClass(cell.element, 'live');
+				removeClass(cell.element, 'dead');
+
 			} else {
-				removeClass(cell.element, 'live');
+				// removeClass(cell.element, 'live');
+				addClass(cell.element, 'dead');
+
 			}
 		});
 	}

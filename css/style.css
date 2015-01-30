@@ -8,8 +8,12 @@
 	border-collapse: collapse;
 }
 
-.live {
+/*.live {
 	background-color: red;
+}*/
+
+.dead {
+	background-color: none;
 }
 
 .cell {
