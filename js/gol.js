@@ -1,7 +1,3 @@
-/*
-Switch setInterval out for requestAnimationFrame
-*/
-
 function Grid(w, h) {
 	var grid = this;
 	grid.width = w;
@@ -71,12 +67,6 @@ function Grid(w, h) {
 				}
 			}
 		}
-		// grid.traverse(function(cell) {
-		// 	if (cell.x >= start_x && cell.y >= start_y) {
-
-		// 		cell.live = config.live(cell.x, cell.y);
-		// 	}
-		// });
 	}
 
 	function Cell(x, y) {
@@ -124,6 +114,8 @@ function Grid(w, h) {
 function View(grid) {
 	var view = this;
 	view.table = document.getElementById('game_table');
+	view.speed = document.getElementById('speed');
+	view.running = false;
 	view.grid = grid;
 
 	view.init = function() {
@@ -159,26 +151,28 @@ function View(grid) {
 	}
 
 	view.animate = function() {
-		view.grid.step();
-		view.update();
+		var tick_frequency = 3000 / view.speed.value;
+		if (tick_frequency !== Infinity) {
+			view.grid.step();
+			view.update();
+		} else {
+			tick_frequency = 1000;
+		}
+		setTimeout(function() {
+			window.requestAnimationFrame(view.animate);
+		}, tick_frequency);
 	}
 	
 
 	view.start = function() {
-		if (!view.animator) {
-			view.animator = setInterval((function(view) {
-				return function() {
-					view.animate();
-				}
-			})(view), 100);
+		if (!view.running) {
+			window.requestAnimationFrame(view.animate);
 		}
+		view.running = true;
 	}
 
 	view.stop = function() {
-		if (view.animator) {
-			clearInterval(view.animator);
-			view.animator = null;
-		}
+		view.running = false;
 	}
 
 	view.init();
@@ -218,6 +212,8 @@ function Configuration(c_type) {
 	Configurations are stored as a two-dimensional array of cells.
 	The array is the minimum size needed for the configuration-- not the size
 	of the overall grid.
+
+	TODO: What's a better way to store the config?
 	*/
 	var config = this;
 	config.types = {
@@ -281,21 +277,12 @@ function Configuration(c_type) {
 			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 		],
 		'lightweight_spaceship': [
-			// [0, 0, 0, 0, 0, 0, 0],
-			// [0, 0, 1, 0, 0, 1, 0],
-			// [0, 1, 0, 0, 0, 0, 0],
-			// [0, 1, 0, 0, 0, 1, 0],
-			// [0, 1, 1, 1, 1, 0, 0],
-			// [0, 0, 0, 0, 0, 0, 0],
-
 			[0, 0, 0, 0, 0, 0, 0],
 			[0, 1, 0, 0, 1, 0, 0],
 			[0, 0, 0, 0, 0, 1, 0],
 			[0, 1, 0, 0, 0, 1, 0],
 			[0, 0, 1, 1, 1, 1, 0],
-
 			[0, 0, 0, 0, 0, 0, 0],
-
 		]
 	}
 	config.map = config.types[c_type];
@@ -305,3 +292,15 @@ function Configuration(c_type) {
 }
 
 var game_of_life = new GameOfLife();
+
+
+
+// shim layer with setTimeout fallback
+window.requestAnimationFrame = (function(){
+  return  window.requestAnimationFrame       ||
+          window.webkitRequestAnimationFrame ||
+          window.mozRequestAnimationFrame    ||
+          function( callback ){
+            window.setTimeout(callback, 1000 / 60);
+          };
+})();
