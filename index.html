@@ -5,8 +5,10 @@
 </head>
 <body>
 	<div id="container">
+		<img id="mona_lisa" src="img/mona_lisa.jpg" style="display: none"/>
 		<button onclick="game_of_life.view.start()">Start</button>
 		<button onclick="game_of_life.view.stop()">Stop</button>
+		<button onclick="game_of_life.full_config()">Fill</button>
 		<button onclick="game_of_life.randomize_config()">Randomize configuration</button>
 		<button onclick="game_of_life.set_config(new Configuration('block'))">Square</button>
 		<button onclick="game_of_life.set_config(new Configuration('blinker'))">Blinker</button>
@@ -26,7 +28,7 @@
 
 
 
-		<table id="game_table">
+		<table id="game_table" >
 
 		</table>
 	</div>
