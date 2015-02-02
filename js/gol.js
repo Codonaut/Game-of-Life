@@ -227,6 +227,7 @@ function View(grid) {
 		} else {
 			tick_frequency = 1000;
 		}
+		console.log("Setting next animation " + tick_frequency);
 		setTimeout(function() {
 			window.requestAnimationFrame(view.animate);
 		}, tick_frequency);
@@ -249,7 +250,7 @@ function View(grid) {
 
 function GameOfLife() {
 	var gol = this;
-	gol.grid = new Grid(79, 120);
+	gol.grid = new Grid(79*2, 120*2);
 	gol.view = new View(this.grid);
 
 	gol.set_config = function(config, start_x, start_y) {

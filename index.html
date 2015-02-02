@@ -1,18 +1,22 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<link rel="stylesheet" type="text/css" href="css/style.css" >
 	<link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" >
+	<link rel="stylesheet" type="text/css" href="css/style.css" >
 </head>
 <body>
 	<div id="container" class="container">
 		<div class="row">
-			<div class="col-md-12">
-				<button class="btn btn-default" onclick="game_of_life.view.start()">Start</button>
-				<button class="btn btn-default" onclick="game_of_life.view.stop()">Stop</button>
-				<button class="btn btn-default" onclick="game_of_life.set_config('empty')">Empty</button>
-				<button class="btn btn-default" onclick="game_of_life.set_config('full')">Fill</button>
-				<button class="btn btn-default" onclick="game_of_life.set_config('random')">Randomize configuration</button>
+			<div class="col-md-6 well">
+				<h3>Controls</h3>
+				<button class="btn btn-success" onclick="game_of_life.view.start()">Start</button>
+				<button class="btn btn-danger" onclick="game_of_life.view.stop()">Stop</button>
+				<button class="btn btn-info" onclick="game_of_life.set_config('empty')">Empty</button>
+				<button class="btn btn-info" onclick="game_of_life.set_config('full')">Fill</button>
+				<button class="btn btn-info" onclick="game_of_life.set_config('random')">Randomize configuration</button><br>
+				<br>
+				 <label>Speed<input id="speed" type="range" min="0" max="180"/></label>
+				 <h4>Place Configurations</h4>
 				<button class="btn btn-default" onclick="game_of_life.set_config(new Configuration('block'))">Square</button>
 				<button class="btn btn-default" onclick="game_of_life.set_config(new Configuration('blinker'))">Blinker</button>
 				<button class="btn btn-default" onclick="game_of_life.set_config(new Configuration('glider'))">Glider</button>
@@ -23,9 +27,9 @@
 				<button class="btn btn-default" onclick="game_of_life.set_config(new Configuration('toad'))">Toad</button>
 				<button class="btn btn-default" onclick="game_of_life.set_config(new Configuration('beacon'))">Beacon</button>
 				<button class="btn btn-default" onclick="game_of_life.set_config(new Configuration('lightweight_spaceship'))">Lightweight Space Ship</button>
-				<br>
-				 <label>speed 0 <input id="speed" type="range" min="0" max="180"/> 180</label>
-
+				
+			</div>
+			<div>
 				<table id="game_table" >
 
 				</table>
