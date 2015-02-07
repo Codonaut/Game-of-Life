@@ -4,7 +4,7 @@ a) Hover over table cell and have it filled in
 b) Hover over table cell and have a formation appear with start_x, and start_y from cursor
 c) Click to plcae that
 */
-var game_of_life;
+var gol;
 var canvas = document.createElement("canvas");
 canvas.style.display = "none";
 document.getElementById('container').appendChild(canvas);
@@ -14,7 +14,7 @@ img.addEventListener("load", function() {
 	canvas.width = img.width;
 	canvas.height = img.height;
   	ctx.drawImage(img, 0, 0);
-  	game_of_life = new GameOfLife();
+  	gol = new GameOfLife();
 }, false);
 img.src = 'img/mona_lisa.jpg';
 
@@ -41,20 +41,14 @@ function Grid(w, h) {
 	}
 	grid.reset();
 
-	grid.traverse = function(fn, x1, y1, x2, y2) {
-		var x, y;
-		if (!x1) {
-			x1 = 0;
+	grid.traverse = function(fn) {
+		for (x=0; x<grid.width; x++) {
+			for (y=0; y<grid.height; y++) {
+				fn(grid.rows[x][y]);
+			}
 		}
-		if (!x2) {
-			x2 = view.grid.width;
-		}
-		if (!y1) {
-			y1 = 0;
-		}
-		if (!y2) {
-			y2 = view.grid.height;
-		}
+	}
+	grid.traverse_range = function(fn, x1, y1, x2, y2) {
 		for (x=x1; x<x2; x++) {
 			for (y=y1; y<y2; y++) {
 				fn(grid.rows[x][y]);
@@ -133,11 +127,14 @@ function Grid(w, h) {
 	}
 
 	grid.remove_previews = function() {
-		var i;
+		var i,
+			removed = [];
 		for (i=0; i<grid.previewed_cells.length; i++) {
 			grid.previewed_cells[i].previewed_live = false;
+			removed.push(grid.previewed_cells[i]);
 		}
 		grid.previewed_cells = [];
+		return removed;
 	}
 	
 	grid.set_config = function(config, start_x, start_y) {
@@ -219,6 +216,34 @@ function Grid(w, h) {
 		var cell = this;
 		cell.live = !cell.live;
 	}
+
+	Cell.prototype.register_event_handlers = function() {
+		var cell = this;
+		cell.element.addEventListener('mouseover', function(evt) {
+			console.log("Starting");
+			var start = new Date();
+			gol.grid.preview_config(new Configuration('block'), cell.x, cell.y);
+			gol.view.update(cell.x, cell.y, cell.x+2, cell.y+2);		// TODO: Update affected section only
+			var finish = new Date();
+			var difference = new Date();
+			difference.setTime(finish.getTime() - start.getTime());
+			// console.log( difference.getMilliseconds() );
+		});
+
+		cell.element.addEventListener('mouseleave', function(evt) {
+			console.log("Leaving");
+			var range = coord_range_from_cell_arr(gol.grid.remove_previews());
+			// var start = new Date();
+			// console.log(range);
+			// console.log(gol.grid.previewed_cells);
+			console.log(range);
+			gol.view.update(range[0], range[1], range[2], range[3]); // TODO: Can I just pass in range?
+			// var finish = new Date();
+			// var difference = new Date();
+			// difference.setTime(finish.getTime() - start.getTime());
+			// console.log( difference.getMilliseconds() );
+		})
+	}
 }
 
 function View(grid) {
@@ -227,27 +252,6 @@ function View(grid) {
 	view.speed = document.getElementById('speed');
 	view.running = false;
 	view.grid = grid;
-
-	
-	view.table.addEventListener('mouseover', function(evt) {
-		var cell,
-			x,
-			y,
-			td = document.elementFromPoint(evt.clientX, evt.clientY);
-		for (x=0; x<view.grid.width && !cell; x++) {
-			for (y=0; y<view.grid.height && !cell; y++) {
-				if (view.grid.rows[x][y].element === td) {
-					cell = view.grid.rows[x][y];
-				}
-			}
-		}
-		view.grid.preview_config(new Configuration('block'), cell.x, cell.y);
-		view.update();		// TODO: Update affected section only
-	});
-	view.table.addEventListener('mouseleave', function(evt) {
-		view.grid.remove_previews();
-		view.update();	// TODO: Update affected section only
-	});
 
 	view.init = function() {
 		var x, y, tr, td, cell_width, cell_height;
@@ -259,6 +263,7 @@ function View(grid) {
 				cell = view.grid.rows[x][y];
 				cell.live_color = view.grid.coord_to_color(x, y);
 				cell.element = td;
+				cell.register_event_handlers();
 				td.addEventListener('click', (function(cell) {
 					return function(e) {
 						cell.toggle();
@@ -273,18 +278,31 @@ function View(grid) {
 	}
 
 	view.update = function(x1, y1, x2, y2) {
-
-		grid.traverse(function(cell) {
-			if (cell.live) {
-				removeClass(cell.element, 'dead');
-				cell.element.style.backgroundColor = cell.live_color;
-			} else if (cell.previewed_live) {
-				cell.element.style.backgroundColor = cell.previewed_live_color;
-			} else {
-				addClass(cell.element, 'dead');
-				cell.element.style.backgroundColor = cell.dead_color;
-			}
-		}, x1, y1, x2, y2);
+		if (x1 || y1 || x2 || y2) {
+			grid.traverse_range(function(cell) {
+				if (cell.live) {
+					removeClass(cell.element, 'dead');
+					cell.element.style.backgroundColor = cell.live_color;
+				} else if (cell.previewed_live) {
+					cell.element.style.backgroundColor = cell.previewed_live_color;
+				} else {
+					addClass(cell.element, 'dead');
+					cell.element.style.backgroundColor = cell.dead_color;
+				}
+			}, x1, y1, x2+1, y2+1);
+		} else {
+			grid.traverse(function(cell) {
+				if (cell.live) {
+					removeClass(cell.element, 'dead');
+					cell.element.style.backgroundColor = cell.live_color;
+				} else if (cell.previewed_live) {
+					cell.element.style.backgroundColor = cell.previewed_live_color;
+				} else {
+					addClass(cell.element, 'dead');
+					cell.element.style.backgroundColor = cell.dead_color;
+				}
+			});
+		}
 	}
 
 	view.animate = function() {
@@ -439,3 +457,26 @@ window.requestAnimationFrame = (function(){
           };
 })();
 
+
+function coord_range_from_cell_arr(arr) {
+	var i,
+		cell,
+		min_x, max_x,
+		min_y, max_y;
+	for (i=0; i<arr.length; i++) {
+		cell = arr[i];
+		if (min_x === undefined || min_x > cell.x) {
+			min_x = cell.x;
+		}
+		if (min_y === undefined || min_y > cell.y) {
+			min_y = cell.y;
+		}
+		if (max_x === undefined || max_x < cell.x) {
+			max_x = cell.x;
+		}
+		if (max_y === undefined || max_y < cell.y) {
+			max_y = cell.y;
+		}
+	}
+	return [min_x, min_y, max_x, max_y];
+}
