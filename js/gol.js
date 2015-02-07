@@ -3,9 +3,12 @@
 a) Hover over table cell and have it filled in
 b) Hover over table cell and have a formation appear with start_x, and start_y from cursor
 c) Click to plcae that
+
+-- Insert rainbow color option
 */
 var gol;
 var canvas = document.createElement("canvas");
+var selected_config;
 canvas.style.display = "none";
 document.getElementById('container').appendChild(canvas);
 var ctx = canvas.getContext('2d');
@@ -49,8 +52,8 @@ function Grid(w, h) {
 		}
 	}
 	grid.traverse_range = function(fn, x1, y1, x2, y2) {
-		for (x=x1; x<x2; x++) {
-			for (y=y1; y<y2; y++) {
+		for (x=Math.min(grid.width, Math.max(0, x1)); x<Math.min(grid.width, x2); x++) {
+			for (y=Math.min(grid.height, Math.max(0, y1)); y<Math.min(grid.height, y2); y++) {
 				fn(grid.rows[x][y]);
 			}
 		}
@@ -117,8 +120,8 @@ function Grid(w, h) {
 		map = config.map;
 		for (x=start_x; x<start_x+map[0].length+1; x++) {
 			for (y=start_y; y<start_y+map.length+1; y++) {
-				cell = grid.rows[x][y];
-				if (map[x-start_x] && map[x-start_x][y-start_y]) {
+				cell = grid.rows[x] ? grid.rows[x][y] : null;
+				if (cell && map[x-start_x] && map[x-start_x][y-start_y]) {
 					cell.previewed_live = true;
 					grid.previewed_cells.push(cell);
 				}
@@ -137,7 +140,7 @@ function Grid(w, h) {
 		return removed;
 	}
 	
-	grid.set_config = function(config, start_x, start_y) {
+	grid.set_config = function(config) {
 		if (config === 'random') {
 			grid.traverse(function(cell) {
 				cell.live = Math.random() > .5;
@@ -150,26 +153,21 @@ function Grid(w, h) {
 			grid.traverse(function(cell) {
 				cell.live = false;
 			});
-		} else {
-			var map, x, y, cell;
-			if (!start_x) {
-				start_x = 0;
-			}
-			if (!start_y) {
-				start_y = 0;
-			}
-			map = config.map;
-			for (x=0; x<grid.width; x++) {
-				for (y=0; y<grid.height; y++) {
-					cell = grid.rows[x][y];
-					if (map[x-start_x] && map[x-start_x][y-start_y]) {
-						cell.live = true;
-					} else {
-						cell.live = false;
-					}
-				}
-			}
 		}
+		// } else {
+		// 	
+		// }
+	}
+
+	grid.set_config_to_preview = function() {
+		var i,
+			edited_cells = grid.previewed_cells;
+		for (i=0; i<grid.previewed_cells.length; i++) {
+			grid.previewed_cells[i].live = true;
+			grid.previewed_cells[i].previewed_live = false;
+		}
+		grid.previewed_cells = [];
+		return edited_cells;
 	}
 
 	function Cell(x, y) {
@@ -220,29 +218,31 @@ function Grid(w, h) {
 	Cell.prototype.register_event_handlers = function() {
 		var cell = this;
 		cell.element.addEventListener('mouseover', function(evt) {
-			console.log("Starting");
-			var start = new Date();
-			gol.grid.preview_config(new Configuration('block'), cell.x, cell.y);
-			gol.view.update(cell.x, cell.y, cell.x+2, cell.y+2);		// TODO: Update affected section only
-			var finish = new Date();
-			var difference = new Date();
-			difference.setTime(finish.getTime() - start.getTime());
-			// console.log( difference.getMilliseconds() );
+			// TODO: Change these functions to cell.mouseover and cell.mouseleave insead of having anonymous functions here
+			if (selected_config) {
+				var config = new Configuration(selected_config);
+				gol.grid.preview_config(config, cell.x, cell.y);
+				gol.view.update(cell.x, cell.y, cell.x+config.width, cell.y+config.height);		// TODO: Update affected section only
+			}
 		});
 
 		cell.element.addEventListener('mouseleave', function(evt) {
-			console.log("Leaving");
-			var range = coord_range_from_cell_arr(gol.grid.remove_previews());
-			// var start = new Date();
-			// console.log(range);
-			// console.log(gol.grid.previewed_cells);
-			console.log(range);
-			gol.view.update(range[0], range[1], range[2], range[3]); // TODO: Can I just pass in range?
-			// var finish = new Date();
-			// var difference = new Date();
-			// difference.setTime(finish.getTime() - start.getTime());
-			// console.log( difference.getMilliseconds() );
+			if (selected_config && gol.grid.previewed_cells) {
+				var range = coord_range_from_cell_arr(gol.grid.remove_previews());
+				gol.view.update(range[0], range[1], range[2], range[3]); // TODO: Can I just pass in range?
+			}
 		})
+
+		
+
+		cell.element.addEventListener('click', function(evt) {
+			if (selected_config) {
+				gol.set_config();
+			} else {
+				cell.toggle();
+				gol.view.update();
+			}
+		});
 	}
 }
 
@@ -264,13 +264,6 @@ function View(grid) {
 				cell.live_color = view.grid.coord_to_color(x, y);
 				cell.element = td;
 				cell.register_event_handlers();
-				td.addEventListener('click', (function(cell) {
-					return function(e) {
-						cell.toggle();
-						view.update();
-					}
-				})(cell));
-
 				tr.appendChild(td);
 			}
 			view.table.appendChild(tr);
@@ -316,7 +309,7 @@ function View(grid) {
 		} else {
 			tick_frequency = 1000;
 		}
-		console.log("Setting next animation " + tick_frequency);
+		// console.log("Setting next animation " + tick_frequency);
 		setTimeout(function() {
 			window.requestAnimationFrame(view.animate);
 		}, tick_frequency);
@@ -334,6 +327,11 @@ function View(grid) {
 		view.running = false;
 	}
 
+	view.select_config = function(config_type) {
+		selected_config = config_type;
+		console.log(config_type);
+	}
+
 	view.init();
 }
 
@@ -342,13 +340,20 @@ function GameOfLife() {
 	gol.grid = new Grid(79, 120);
 	gol.view = new View(this.grid);
 
-	gol.set_config = function(config, start_x, start_y) {
-		/*	config is either a string "random"/"full"/"empty" or a valid instance of Configuration.
-			start_x and start_y are the starting position of the configuration, if a Configuration
-			instance is passed in.
+	gol.set_config = function(special_config) {
+		/* 
+			special_config is in ('empty', 'full', 'random'), or not passed in
 		*/
-		gol.grid.set_config(config, start_x, start_y);
-		gol.view.update();
+		if (special_config) {
+			gol.grid.set_config(special_config);
+			gol.view.update();
+		} else {
+			// Just set the currently previewed config
+			var range = coord_range_from_cell_arr(gol.grid.set_config_to_preview());
+			console.log(range);
+			gol.view.update(range[0], range[1], range[2], range[3]);
+		}
+		selected_config = null;
 	}
 }
 
@@ -376,6 +381,17 @@ function Configuration(c_type) {
 		'block': [
 			[1, 1],
 			[1, 1]
+		],
+		'cross': [
+			[0, 0, 0, 0, 1, 0, 0, 0, 0],
+			[0, 0, 0, 0, 1, 0, 0, 0, 0],
+			[0, 0, 0, 0, 1, 0, 0, 0, 0],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0],
+			[1, 1, 1, 0, 0, 0, 1, 1, 1],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0],
+			[0, 0, 0, 0, 1, 0, 0, 0, 0],
+			[0, 0, 0, 0, 1, 0, 0, 0, 0],
+			[0, 0, 0, 0, 1, 0, 0, 0, 0],
 		],
 		'beehive': [
 			[0, 1, 1, 0],
@@ -442,6 +458,8 @@ function Configuration(c_type) {
 		]
 	}
 	config.map = config.types[c_type];
+	config.width = config.map[0].length;
+	config.height = config.map.length;
 	if (!config.map) {
 		alert("Invalid configuration given!");
 	}
